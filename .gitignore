@@ -1,0 +1,24 @@
+# PlatformIO build files and local environment
+.pio/
+.pioenvs/
+.piolibdeps/
+.clangd/
+
+# VS Code settings and workspace
+.vscode/.browserslistrc
+.vscode/.cache/
+.vscode/compile_commands.json
+.vscode/completion_commands.json
+.vscode/ipch/
+
+# C/C++ compiler and CMake output
+*.o
+*.elf
+*.bin
+*.hex
+
+# OS & Editor temporary files
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
