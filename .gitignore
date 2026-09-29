@@ -5,11 +5,7 @@
 .clangd/
 
 # VS Code settings and workspace
-.vscode/.browserslistrc
-.vscode/.cache/
-.vscode/compile_commands.json
-.vscode/completion_commands.json
-.vscode/ipch/
+.vscode/
 
 # C/C++ compiler and CMake output
 *.o
