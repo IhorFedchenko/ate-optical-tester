@@ -53,16 +53,16 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             <div class="card-val c-blue"><span id="sent">0</span> / <span id="recv">0</span></div>
         </div>
         <div class="card">
-            <div class="card-label">Sequence ID (Exp / Rx)</div>
-            <div class="card-val c-green"><span id="exp-id">0</span> / <span id="rx-id">0</span></div>
+            <div class="card-label">Link Quality (LQ)</div>
+            <div class="card-val c-green"><span id="exp-id">100.0</span>%</div>
         </div>
         <div class="card">
-            <div class="card-label">CRC32 Errors</div>
+            <div class="card-label">CRC8 Errors</div>
             <div class="card-val c-red" id="crc">0</div>
         </div>
         <div class="card">
-            <div class="card-label">Bit Error Rate (BER)</div>
-            <div class="card-val c-yellow" id="ber">0.00e-00</div>
+            <div class="card-label">Packet Loss</div>
+            <div class="card-val c-yellow" id="ber">0.00%</div>
         </div>
         <div class="card">
             <div class="card-label">Latency / RTT</div>
