@@ -15,12 +15,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b0f19; color: #f1f5f9; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #1e293b; margin-bottom: 20px; }
         .brand { font-size: 1.25rem; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
-        .tag { background: #0369a1; color: #e0f2fe; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-        .status-ap { font-size: 0.85rem; color: #94a3b8; font-family: monospace; }
         .controls { display: flex; gap: 12px; margin-bottom: 24px; }
         .btn { padding: 12px 24px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
         .btn-start { background: #0284c7; color: white; }
         .btn-start:hover { background: #0369a1; }
+        .btn-stop { background: #dc2626; color: white; }
+        .btn-stop:hover { background: #b91c1c; }
         .btn-reset { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
         .btn-reset:hover { background: #334155; color: white; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -38,8 +38,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
 
     <div class="header">
-        <div class="brand">⚡ ATE OPTICAL TESTER <span class="tag">PROGMEM AP</span></div>
-        <div class="status-ap">IP: <strong>192.168.4.1</strong></div>
+        <div class="brand">⚡ ATE OPTICAL TESTER</div>        
     </div>
 
     <div class="controls">
@@ -71,7 +70,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     </div>
 
     <div class="console-box" id="log">
-        <div><span class="log-time">[SYSTEM]</span> Connected to ESP32 Web Server via Access Point.</div>
+        <div><span class="log-time">[SYSTEM]</span> Connected via HTTP AP.</div>
     </div>
 
     <script>
@@ -84,23 +83,56 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
-        function toggleTest() {
-            isRunning = !isRunning;
-            const btn = document.getElementById('startBtn');
-            if (isRunning) {
-                btn.innerText = 'STOP TEST';
-                btn.style.background = '#dc2626';
-                log('<span style="color:#4ade80">[CMD] Start signal sent</span>');
-            } else {
-                btn.innerText = 'START TEST';
-                btn.style.background = '#0284c7';
-                log('<span style="color:#f87171">[CMD] Stop signal sent</span>');
+        async function fetchTelemetry() {
+            try {
+                const res = await fetch('/api/data');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('sent').innerText = data.sent;
+                    document.getElementById('recv').innerText = data.recv;
+
+                    if (data.running !== isRunning) {
+                        isRunning = data.running;
+                        const btn = document.getElementById('startBtn');
+                        if (isRunning) {
+                            btn.innerText = 'STOP TEST';
+                            btn.className = 'btn btn-stop';
+                            log('<span style="color:#4ade80">[CMD] Test Started</span>');
+                        } else {
+                            btn.innerText = 'START TEST';
+                            btn.className = 'btn btn-start';
+                            log('<span style="color:#f87171">[CMD] Test Stopped</span>');
+                        }
+                    }
+                }
+            } catch (e) {
+                // Мережева помилка
             }
         }
 
-        function resetStats() {
-            log('<span style="color:#38bdf8">[CMD] Reset signal sent</span>');
+        async function toggleTest() {
+            try {
+                await fetch('/api/toggle', { method: 'POST' });
+                fetchTelemetry();
+            } catch (e) {
+                log('<span style="color:#f87171">[ERR] Failed to toggle test</span>');
+            }
         }
+
+        async function resetStats() {
+            document.getElementById('sent').innerText = '0';
+            document.getElementById('recv').innerText = '0';
+            try {
+                await fetch('/api/reset', { method: 'POST' });
+                log('<span style="color:#38bdf8">[CMD] Stats Reset</span>');
+            } catch (e) {
+                log('<span style="color:#f87171">[ERR] Failed to reset stats</span>');
+            }
+        }
+
+        // Опитування раз на 200 мс (5 Гц)
+        setInterval(fetchTelemetry, 200);
+        fetchTelemetry();
     </script>
 </body>
 </html>
