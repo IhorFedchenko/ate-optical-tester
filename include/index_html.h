@@ -79,7 +79,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         function log(msg) {
             const consoleEl = document.getElementById('log');
             const time = new Date().toLocaleTimeString();
-            consoleEl.innerHTML += `<div><span class="log-time">[${time}]</span>${msg}</div>`;
+            consoleEl.innerHTML += `<div><span class="log-time">[${time}]</span> ${msg}</div>`;
             consoleEl.scrollTop = consoleEl.scrollHeight;
         }
 
@@ -91,8 +91,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     document.getElementById('sent').innerText = data.sent;
                     document.getElementById('recv').innerText = data.recv;
 
-                    if (data.running !== isRunning) {
-                        isRunning = data.running;
+                    const serverState = Boolean(data.running);
+                    if (serverState !== isRunning) {
+                        isRunning = serverState;
                         const btn = document.getElementById('startBtn');
                         if (isRunning) {
                             btn.innerText = 'STOP TEST';
@@ -106,32 +107,31 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     }
                 }
             } catch (e) {
-                // Мережева помилка
+                // Помилка мережі
             }
         }
 
         async function toggleTest() {
             try {
                 await fetch('/api/toggle', { method: 'POST' });
-                fetchTelemetry();
+                setTimeout(fetchTelemetry, 50);
             } catch (e) {
                 log('<span style="color:#f87171">[ERR] Failed to toggle test</span>');
             }
         }
 
         async function resetStats() {
-            document.getElementById('sent').innerText = '0';
-            document.getElementById('recv').innerText = '0';
             try {
                 await fetch('/api/reset', { method: 'POST' });
+                document.getElementById('sent').innerText = '0';
+                document.getElementById('recv').innerText = '0';
                 log('<span style="color:#38bdf8">[CMD] Stats Reset</span>');
             } catch (e) {
                 log('<span style="color:#f87171">[ERR] Failed to reset stats</span>');
             }
         }
 
-        // Опитування раз на 200 мс (5 Гц)
-        setInterval(fetchTelemetry, 200);
+        setInterval(fetchTelemetry, 300);
         fetchTelemetry();
     </script>
 </body>

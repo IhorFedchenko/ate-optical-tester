@@ -16,10 +16,14 @@ void initWebServer(const char* ssid, const char* password) {
 
     // Отримання телеметрії (JSON)
     server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request){
-        String json = "{\"sent\":" + String(packetsSent) + 
-                      ",\"recv\":" + String(packetsRecv) + 
-                      ",\"running\":" + String(isTestRunning ? "true" : "false") + "}";
-        request->send(200, "application/json", json);
+        char jsonBuffer[128];
+        snprintf(jsonBuffer, sizeof(jsonBuffer), 
+                 "{\"sent\":%u,\"recv\":%u,\"running\":%s}", 
+                 packetsSent, packetsRecv, isTestRunning ? "true" : "false");
+
+        AsyncWebServerResponse *response = request->beginResponse(200, "application/json", jsonBuffer);
+        response->addHeader("Cache-Control", "no-cache");
+        request->send(response);
     });
 
     // Старт / Стоп тесту
