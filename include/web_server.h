@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
+#include "crsf_service.h"
 
 // Глобальні прапорці та лічильники для WebUI
 extern bool isTestRunning;
