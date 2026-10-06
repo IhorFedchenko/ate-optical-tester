@@ -42,7 +42,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     </div>
 
     <div class="controls">
-        <button class="btn btn-start" id="startBtn" onclick="toggleTest()">START TEST</button>
+        <button class="btn btn-start" id="startBtn" onclick="toggleTest()">START 15s TEST</button>
         <button class="btn btn-reset" onclick="resetStats()">RESET STATS</button>
     </div>
 
@@ -53,7 +53,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         </div>
         <div class="card">
             <div class="card-label">Link Quality (LQ)</div>
-            <div class="card-val c-green"><span id="exp-id">100.0</span>%</div>
+            <div class="card-val c-green"><span id="lq">100.0</span>%</div>
         </div>
         <div class="card">
             <div class="card-label">CRC8 Errors</div>
@@ -61,7 +61,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         </div>
         <div class="card">
             <div class="card-label">Packet Loss</div>
-            <div class="card-val c-yellow" id="ber">0.00%</div>
+            <div class="card-val c-yellow" id="loss">0.00%</div>
         </div>
         <div class="card">
             <div class="card-label">Latency / RTT</div>
@@ -74,7 +74,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     </div>
 
     <script>
-        let isRunning = false;
+        let currentState = 0;
 
         function log(msg) {
             const consoleEl = document.getElementById('log');
@@ -90,25 +90,35 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     const data = await res.json();
                     document.getElementById('sent').innerText = data.sent;
                     document.getElementById('recv').innerText = data.recv;
+                    document.getElementById('lq').innerText = data.lq.toFixed(1);
+                    document.getElementById('crc').innerText = data.crc;
+                    document.getElementById('loss').innerText = data.loss.toFixed(2) + '%';
+                    document.getElementById('rtt').innerText = data.rtt.toFixed(1) + ' ms';
 
-                    const serverState = Boolean(data.running);
-                    if (serverState !== isRunning) {
-                        isRunning = serverState;
-                        const btn = document.getElementById('startBtn');
-                        if (isRunning) {
-                            btn.innerText = 'STOP TEST';
-                            btn.className = 'btn btn-stop';
-                            log('<span style="color:#4ade80">[CMD] Test Started</span>');
-                        } else {
-                            btn.innerText = 'START TEST';
-                            btn.className = 'btn btn-start';
-                            log('<span style="color:#f87171">[CMD] Test Stopped</span>');
+                    const btn = document.getElementById('startBtn');
+                    
+                    if (data.state === 1) { // TEST_RUNNING
+                        const leftSec = Math.max(0, ((15000 - data.elapsed) / 1000)).toFixed(1);
+                        btn.innerText = `STOP TEST (${leftSec}s)`;
+                        btn.className = 'btn btn-stop';
+                        if (currentState !== 1) {
+                            currentState = 1;
+                            log('<span style="color:#4ade80">[CMD] Started 3750 Packets Run (15s Traffic)</span>');
                         }
+                    } else if (data.state === 2) { // TEST_FINISHED
+                        btn.innerText = 'START 15s TEST';
+                        btn.className = 'btn btn-start';
+                        if (currentState === 1) {
+                            currentState = 2;
+                            log(`<span style="color:#38bdf8">[RESULT] Test Finished! Sent: ${data.sent}, Loss: ${data.loss.toFixed(2)}%, Avg RTT: ${data.avg_rtt.toFixed(1)}ms</span>`);
+                        }
+                    } else { // TEST_IDLE
+                        btn.innerText = 'START 15s TEST';
+                        btn.className = 'btn btn-start';
+                        currentState = 0;
                     }
                 }
-            } catch (e) {
-                // Помилка мережі
-            }
+            } catch (e) {}
         }
 
         async function toggleTest() {
@@ -125,13 +135,17 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 await fetch('/api/reset', { method: 'POST' });
                 document.getElementById('sent').innerText = '0';
                 document.getElementById('recv').innerText = '0';
+                document.getElementById('crc').innerText = '0';
+                document.getElementById('lq').innerText = '100.0';
+                document.getElementById('loss').innerText = '0.00%';
+                document.getElementById('rtt').innerText = '0.0 ms';
                 log('<span style="color:#38bdf8">[CMD] Stats Reset</span>');
             } catch (e) {
                 log('<span style="color:#f87171">[ERR] Failed to reset stats</span>');
             }
         }
 
-        setInterval(fetchTelemetry, 300);
+        setInterval(fetchTelemetry, 250);
         fetchTelemetry();
     </script>
 </body>
