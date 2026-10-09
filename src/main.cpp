@@ -7,7 +7,7 @@ const char* ssid = "Yokogawna-Exfuflo-AQ1550";
 const char* password = "12312312"; 
 
 void setup() {
-    Serial.begin(460800);
+    Serial.begin(DEBUG_BAUTRATE);
 
     statusLedInit();
     crsfServiceInit();
