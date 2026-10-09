@@ -81,22 +81,25 @@ static void processIncomingByte(uint8_t b) {
 }
 
 void crsfServiceLoop(void) {
-    if (g_metrics.state != TEST_RUNNING) {
+  if (g_metrics.state != TEST_RUNNING) {
     while (Serial2.available() > 0) Serial2.read();
     resetParser();
+    lastTxTime = micros();
     return;
   }
 
-    unsigned long currentMicros = micros();
+  unsigned long currentMicros = micros();
 
-    // 2. Таймер відправки 250 Гц (4000 мкс)
+  if (currentMicros - lastTxTime >= TX_INTERVAL_US) {
+    lastTxTime += TX_INTERVAL_US;
     if (currentMicros - lastTxTime >= TX_INTERVAL_US) {
-        lastTxTime = currentMicros;
-        sendCrsfFrame();
+      lastTxTime = currentMicros;
     }
+    sendCrsfFrame();
+  }
 
-    // 3. Обробка вхідного потоку з перевіркою кадру
-    while (Serial2.available() > 0) {
-        processIncomingByte(Serial2.read());
-    }
+  // Обробка вхідного потоку з перевіркою кадру
+  while (Serial2.available() > 0) {
+    processIncomingByte(Serial2.read());
+  }
 }
