@@ -2,6 +2,7 @@
 #include "web_server.h"
 #include "crsf_service.h"
 #include "status_led.h"
+#include "metrics.h"
 
 const char* ssid = "Yokogawna-Exfuflo-AQ1550";
 const char* password = "12312312"; 
@@ -15,6 +16,7 @@ void setup() {
 }
 
 void loop() {
+    metricsProcessCommands();
     statusLedUpdate();
     crsfServiceLoop();
 }

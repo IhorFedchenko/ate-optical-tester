@@ -1,7 +1,9 @@
 #include "metrics.h"
+#include <atomic>
 
 TelemetryMetrics g_metrics;
 static uint64_t totalRttUs = 0;
+static std::atomic<uint8_t> pendingCmd{CMD_NONE};
 
 void metricsInit(void) {
     metricsReset();
@@ -67,7 +69,23 @@ void metricsOnPacketRecv(uint32_t rttUs) {
 
 void metricsOnCrcError(void) {
     if (g_metrics.state != TEST_RUNNING) return;
-
     g_metrics.crcErrors++;
     updateCumulativeStats();
+}
+
+void metricsPostCommand(Command cmd) {
+  pendingCmd.store(cmd);
+}
+
+void metricsProcessCommands(void) {
+  uint8_t cmd = pendingCmd.exchange(CMD_NONE);
+  if (cmd == CMD_TOGGLE) {
+    if (g_metrics.state == TEST_RUNNING) {
+      g_metrics.state = TEST_FINISHED;
+    } else {
+      metricsStart();
+    }
+  } else if (cmd == CMD_RESET) {
+    metricsReset();
+  }
 }

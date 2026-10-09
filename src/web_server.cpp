@@ -30,17 +30,13 @@ void initWebServer(const char* ssid, const char* password) {
 
     // 3. Управління станом тесту
     server.on("/api/toggle", HTTP_POST, [](AsyncWebServerRequest *request){
-        if (g_metrics.state == TEST_RUNNING) {
-            g_metrics.state = TEST_FINISHED;
-        } else {
-            metricsStart();
-        }
+        metricsPostCommand(CMD_TOGGLE);
         request->send(200, "text/plain", "ok");
     });
 
     // 4. Скидання статистики
     server.on("/api/reset", HTTP_POST, [](AsyncWebServerRequest *request){
-        metricsReset();
+        metricsPostCommand(CMD_RESET);
         request->send(200, "text/plain", "reset_ok");
     });
 

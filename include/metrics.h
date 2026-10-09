@@ -12,6 +12,13 @@ enum TestState {
     TEST_FINISHED
 };
 
+enum Command : uint8_t {
+  CMD_NONE = 0,
+  CMD_TOGGLE,
+  CMD_RESET
+};
+
+
 typedef struct {
     uint32_t packetsSent;
     uint32_t packetsRecv;
@@ -33,5 +40,7 @@ void metricsStart(void);
 void metricsOnPacketSent(void);
 void metricsOnPacketRecv(uint32_t rttUs);
 void metricsOnCrcError(void);
+void metricsPostCommand(Command cmd);
+void metricsProcessCommands(void);
 
 #endif // METRICS_H
