@@ -4,6 +4,10 @@
 static unsigned long lastTxTime = 0;
 static const unsigned long TX_INTERVAL_US = 4000; // 250 Hz (4 ms)
 
+static uint8_t rxBuf[CRSF_FRAME_SIZE];
+static uint8_t rxIndex = 0;
+static unsigned long rxStartTime = 0;
+
 static uint8_t crsfCrc8(const uint8_t *data, uint8_t len) {
     uint8_t crc = 0x00;
     while (len--) {
@@ -21,9 +25,12 @@ static uint8_t crsfCrc8(const uint8_t *data, uint8_t len) {
 
 void crsfServiceInit() {
     metricsInit();
-
     Serial1.begin(CRSF_BAUDRATE, SERIAL_8N1, UART1_RX_PIN, UART1_TX_PIN);
     Serial2.begin(CRSF_BAUDRATE, SERIAL_8N1, UART2_RX_PIN, UART2_TX_PIN);
+}
+
+static void resetParser() {
+  rxIndex = 0;
 }
 
 static void sendCrsfFrame() {
@@ -46,10 +53,6 @@ static void sendCrsfFrame() {
 }
 
 static void processIncomingByte(uint8_t b) {
-    static uint8_t rxBuf[CRSF_FRAME_SIZE];
-    static uint8_t rxIndex = 0;
-    static unsigned long rxStartTime = 0;
-
     if (rxIndex == 0) {
         if (b == CRSF_SYNC_BYTE) {
             rxBuf[rxIndex++] = b;
@@ -76,8 +79,11 @@ static void processIncomingByte(uint8_t b) {
 }
 
 void crsfServiceLoop(void) {
-    // 1. Якщо тест не запущено — нічого не робимо
-    if (g_metrics.state != TEST_RUNNING) return;
+    if (g_metrics.state != TEST_RUNNING) {
+    while (Serial2.available() > 0) Serial2.read();
+    resetParser();
+    return;
+  }
 
     unsigned long currentMicros = micros();
 
