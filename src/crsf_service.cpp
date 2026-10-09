@@ -3,6 +3,7 @@
 
 static unsigned long lastTxTime = 0;
 static const unsigned long TX_INTERVAL_US = 4000; // 250 Hz (4 ms)
+static const size_t UART_RX_BUFFER_SIZE = 2048;
 
 static uint8_t rxBuf[CRSF_FRAME_SIZE];
 static uint8_t rxIndex = 0;
@@ -26,6 +27,7 @@ static uint8_t crsfCrc8(const uint8_t *data, uint8_t len) {
 void crsfServiceInit() {
     metricsInit();
     Serial1.begin(CRSF_BAUDRATE, SERIAL_8N1, UART1_RX_PIN, UART1_TX_PIN);
+    Serial2.setRxBufferSize(UART_RX_BUFFER_SIZE);
     Serial2.begin(CRSF_BAUDRATE, SERIAL_8N1, UART2_RX_PIN, UART2_TX_PIN);
 }
 
