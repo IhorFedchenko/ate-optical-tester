@@ -38,7 +38,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
 
     <div class="header">
-        <div class="brand">⚡ ATE OPTICAL TESTER</div>        
+        <div class="brand">⚡ ATE OPTICAL TESTER</div>
     </div>
 
     <div class="controls">
@@ -85,10 +85,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         }
 
         async function fetchTelemetry() {
-        if  (busy) return;
-        busy = true;
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 1000);
+            if (busy) return;
+            busy = true;
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 1000);
             try {
                 const res = await fetch('/api/data', { signal: ctrl.signal });
                 if (res.ok) {
@@ -101,7 +101,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     document.getElementById('rtt').innerText = data.rtt.toFixed(1) + ' ms';
 
                     const btn = document.getElementById('startBtn');
-                    
+
                     if (data.state === 1) { // TEST_RUNNING
                         const leftSec = Math.max(0, ((15000 - data.elapsed) / 1000)).toFixed(1);
                         btn.innerText = `STOP TEST (${leftSec}s)`;
@@ -125,8 +125,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 }
             } catch (e) {
             } finally {
-              clearTimeout(timer);
-              busy = false;
+                clearTimeout(timer);
+                busy = false;
             }
         }
 
@@ -154,11 +154,41 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
+        async function showWifiScan() {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 1500);
+            try {
+                const res = await fetch('/api/wifi', { signal: ctrl.signal });
+                if (!res.ok) {
+                    log(`<span style="color:#f87171">[WIFI] /api/wifi returned HTTP ${res.status}</span>`);
+                    return;
+                }
+                const d = await res.json();
+                if (!d.ok) {
+                    log(`<span style="color:#f87171">[WIFI] Scan failed (code ${d.networks}), fallback channel ${d.channel}</span>`);
+                    return;
+                }
+                log(`<span style="color:#38bdf8">[WIFI] Scan: ${d.networks} networks, ${d.scan_ms} ms</span>`);
+                const scores = d.scores.map((s, i) => `ch${d.first + i}:${s}`).join(' ');
+                log(`<span style="color:#94a3b8">[WIFI] Interference: ${scores}</span>`);
+                log(`<span style="color:#4ade80">[WIFI] AP channel: ${d.channel}</span>`);
+            } catch (e) {
+                log(`<span style="color:#f87171">[WIFI] Scan info unavailable: ${e.name}</span>`);
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
         async function pollLoop() {
             await fetchTelemetry();
             setTimeout(pollLoop, 250);
-}
+        }
+
+        async function start() {
+            await showWifiScan();
             pollLoop();
+        }
+        start();
     </script>
 </body>
 </html>

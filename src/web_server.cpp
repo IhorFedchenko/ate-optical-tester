@@ -13,6 +13,12 @@ static const uint8_t AP_FALLBACK_CHANNEL = 6;
 static const uint32_t SCAN_MS_PER_CHANNEL = 300;
 static const unsigned long SCAN_TIMEOUT_MS = 10000;
 
+static uint32_t scanScores[AP_LAST_CHANNEL + 1] = {0};
+static uint8_t apChannel = 0;
+static unsigned long scanDurationMs = 0;
+static int scanNetworksFound = 0;
+static bool scanOk = false;
+
 
 static uint8_t pickLeastCrowdedChannel() {
   statusLedSetFast(true);
@@ -31,6 +37,9 @@ static uint8_t pickLeastCrowdedChannel() {
   }
 
   statusLedSetFast(false);
+  scanDurationMs = millis() - t0;
+  scanNetworksFound = n;
+  scanOk = (n >= 0);
   Serial.printf("[WiFi] scan took %lu ms, networks found: %d\n", millis() - t0, n);
 
   if (n < 0) {
@@ -50,6 +59,7 @@ static uint8_t pickLeastCrowdedChannel() {
       if (power < 0) power = 0;
       score += (uint32_t)(5 - d) * power;
     }
+    scanScores[c] = score;
     Serial.printf("[WiFi] channel %u: interference %u\n", c, (unsigned)score);
     if (score < bestScore) {
       bestScore = score;
@@ -63,6 +73,7 @@ static uint8_t pickLeastCrowdedChannel() {
 
 void initWebServer(const char* ssid, const char* password) {
   uint8_t channel = pickLeastCrowdedChannel();
+  apChannel = channel;
   Serial.printf("[WiFi] AP channel: %u\n", channel);
 
   WiFi.mode(WIFI_AP);
@@ -83,6 +94,29 @@ void initWebServer(const char* ssid, const char* password) {
     AsyncWebServerResponse *response = request->beginResponse(200, "application/json", jsonBuffer);
     response->addHeader("Cache-Control", "no-cache");
     request->send(response);
+  });
+
+  server.on("/api/wifi", HTTP_GET, [](AsyncWebServerRequest *request){
+    char buf[512];
+    size_t len = snprintf(buf, sizeof(buf),
+      "{\"ok\":%d,\"channel\":%u,\"scan_ms\":%lu,\"networks\":%d,\"first\":%u,\"scores\":[",
+      scanOk ? 1 : 0, (unsigned)apChannel, scanDurationMs, scanNetworksFound,
+      (unsigned)AP_FIRST_CHANNEL);
+    for (uint8_t c = AP_FIRST_CHANNEL; c <= AP_LAST_CHANNEL; c++) {
+      if (len >= sizeof(buf)) break;
+      len += snprintf(buf + len, sizeof(buf) - len, "%s%u",
+                      c > AP_FIRST_CHANNEL ? "," : "", (unsigned)scanScores[c]);
+    }
+    if (len < sizeof(buf)) snprintf(buf + len, sizeof(buf) - len, "]}");
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", buf);
+    response->addHeader("Cache-Control", "no-cache");
+    request->send(response);
+  });
+
+  server.on("/api/toggle", HTTP_POST, [](AsyncWebServerRequest *request){
+    metricsPostCommand(CMD_TOGGLE);
+    request->send(200, "text/plain", "ok");
   });
 
   server.on("/api/toggle", HTTP_POST, [](AsyncWebServerRequest *request){
