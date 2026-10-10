@@ -75,6 +75,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
     <script>
         let currentState = 0;
+        let busy = false;
 
         function log(msg) {
             const consoleEl = document.getElementById('log');
@@ -84,8 +85,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         }
 
         async function fetchTelemetry() {
+        if  (busy) return;
+        busy = true;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 1000);
             try {
-                const res = await fetch('/api/data');
+                const res = await fetch('/api/data', { signal: ctrl.signal });
                 if (res.ok) {
                     const data = await res.json();
                     document.getElementById('sent').innerText = data.sent;
@@ -118,7 +123,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         currentState = 0;
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+            } finally {
+              clearTimeout(timer);
+              busy = false;
+            }
         }
 
         async function toggleTest() {
@@ -145,8 +154,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        setInterval(fetchTelemetry, 250);
-        fetchTelemetry();
+        async function pollLoop() {
+            await fetchTelemetry();
+            setTimeout(pollLoop, 250);
+}
+            pollLoop();
     </script>
 </body>
 </html>
