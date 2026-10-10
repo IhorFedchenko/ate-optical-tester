@@ -1,5 +1,6 @@
 #include "crsf_service.h"
 #include "metrics.h"
+#include <string.h>
 
 static unsigned long lastTxTime = 0;
 static const unsigned long TX_INTERVAL_US = 4000; // 250 Hz (4 ms)
@@ -35,6 +36,21 @@ static void resetParser() {
   rxIndex = 0;
 }
 
+static void resync() {
+  while (rxIndex > 0) {
+    uint8_t i = 1;
+    while (i < rxIndex && rxBuf[i] != CRSF_SYNC_BYTE) i++;
+    if (i >= rxIndex) {
+      rxIndex = 0;
+      return;
+    }
+    memmove(rxBuf, &rxBuf[i], rxIndex - i);
+    rxIndex -= i;
+    rxStartTime = micros();
+    if (rxIndex < 2 || rxBuf[1] == CRSF_FRAME_SIZE - 2) return;
+  }
+}
+
 static void sendCrsfFrame() {
     uint8_t frame[CRSF_FRAME_SIZE];
     
@@ -65,6 +81,11 @@ static void processIncomingByte(uint8_t b) {
 
     rxBuf[rxIndex++] = b;
 
+    if (rxIndex == 2 && rxBuf[1] != CRSF_FRAME_SIZE - 2) {
+    resync();
+    return;
+  }
+
     if (rxIndex >= CRSF_FRAME_SIZE) {
         uint8_t calculatedCrc = crsfCrc8(&rxBuf[2], CRSF_FRAME_SIZE - 3);
         uint8_t frameCrc = rxBuf[CRSF_FRAME_SIZE - 1];
@@ -72,11 +93,11 @@ static void processIncomingByte(uint8_t b) {
         if (calculatedCrc == frameCrc) {
             uint32_t rttUs = micros() - rxStartTime;
             metricsOnPacketRecv(rttUs); // Валідний кадр + RTT
+            rxIndex = 0;
         } else {
             metricsOnCrcError(); // Битий кадр
+            resync();
         }
-
-        rxIndex = 0;
     }
 }
 
