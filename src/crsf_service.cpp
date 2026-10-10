@@ -99,7 +99,14 @@ void crsfServiceLoop(void) {
   }
 
   // Обробка вхідного потоку з перевіркою кадру
-  while (Serial2.available() > 0) {
-    processIncomingByte(Serial2.read());
+  uint8_t chunk[64];
+  int avail;
+  while ((avail = Serial2.available()) > 0) {
+    if (avail > (int)sizeof(chunk)) avail = sizeof(chunk);
+    int n = Serial2.readBytes(chunk, avail);
+    if (n <= 0) break;
+    for (int i = 0; i < n; i++) {
+      processIncomingByte(chunk[i]);
+    }
   }
 }
